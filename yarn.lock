@@ -3422,6 +3422,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@promptions/promptions-bi@workspace:apps/promptions-bi":
+  version: 0.0.0-use.local
+  resolution: "@promptions/promptions-bi@workspace:apps/promptions-bi"
+  dependencies:
+    "@fluentui/react-components": "npm:^9.54.0"
+    "@fluentui/react-icons": "npm:^2.0.258"
+    "@types/react": "npm:^18.3.12"
+    "@types/react-dom": "npm:^18.3.1"
+    "@vitejs/plugin-react": "npm:^4.3.3"
+    immer: "npm:^10.1.1"
+    react: "npm:^18.3.1"
+    react-dom: "npm:^18.3.1"
+    react-markdown: "npm:^10.1.0"
+    rehype-highlight: "npm:^7.0.2"
+    remark-gfm: "npm:^4.0.1"
+    rimraf: "npm:^5.0.0"
+    typescript: "npm:^5.6.3"
+    vite: "npm:^7.3.2"
+  languageName: unknown
+  linkType: soft
+
 "@promptions/promptions-chat@workspace:apps/promptions-chat":
   version: 0.0.0-use.local
   resolution: "@promptions/promptions-chat@workspace:apps/promptions-chat"

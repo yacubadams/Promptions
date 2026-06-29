@@ -1,0 +1,26 @@
+{
+    "name": "promptions-bi",
+    "targets": {
+        "dev": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "vite --port 3005",
+                "cwd": "{projectRoot}"
+            }
+        },
+        "build": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "tsc && vite build",
+                "cwd": "{projectRoot}"
+            }
+        },
+        "typecheck": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "tsc --noEmit",
+                "cwd": "{projectRoot}"
+            }
+        }
+    }
+}
