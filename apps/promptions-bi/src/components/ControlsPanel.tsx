@@ -33,7 +33,6 @@ const useStyles = makeStyles({
     chipGroup: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalXS, marginBottom: tokens.spacingVerticalS },
     chip: {
         cursor: "pointer", border: `1px solid ${tokens.colorNeutralStroke1}`,
-        borderColor: tokens.colorNeutralStroke1,
         borderRadius: tokens.borderRadiusMedium,
         padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
         fontSize: tokens.fontSizeBase200, backgroundColor: tokens.colorNeutralBackground1,
@@ -42,7 +41,7 @@ const useStyles = makeStyles({
     chipActive: {
         backgroundColor: tokens.colorBrandBackground,
         color: tokens.colorNeutralForegroundOnBrand,
-        borderColor: tokens.colorBrandBackground,
+        border: `1px solid ${tokens.colorBrandBackground}`,
     },
     dimensionInput: { display: "flex", gap: tokens.spacingHorizontalXS, marginBottom: tokens.spacingVerticalXS },
     removeBtn: { background: "none", border: "none", cursor: "pointer", color: tokens.colorBrandForeground2, padding: "0 2px", lineHeight: 1 },
