@@ -1,0 +1,5 @@
+{
+  "installCommand": "corepack enable && yarn install",
+  "buildCommand": "yarn workspace @promptions/promptions-bi build",
+  "outputDirectory": "apps/promptions-bi/dist"
+}
