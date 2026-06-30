@@ -1,6 +1,7 @@
 import React from "react";
 import { makeStyles, tokens, Badge, Tooltip } from "@fluentui/react-components";
 import { BITurn } from "../types/bi";
+import { ChartView } from "./ChartView";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -37,7 +38,8 @@ export const MessageBubble: React.FC<Props> = ({ turn, streaming }) => {
             <div className={styles.root}>
                 <div className={styles.userBubble}>
                     {turn.content}
-                    {turn.dataAttachment && <div className={styles.dataAttachment}>📎 Data attached ({turn.dataAttachment.split("\n").length} rows)</div>}
+                    {turn.fileName && <div className={styles.dataAttachment}>📎 {turn.fileName}</div>}
+                    {!turn.fileName && turn.dataAttachment && <div className={styles.dataAttachment}>📎 Data attached ({turn.dataAttachment.split("\n").length} rows)</div>}
                 </div>
             </div>
         );
@@ -47,6 +49,7 @@ export const MessageBubble: React.FC<Props> = ({ turn, streaming }) => {
         <div className={styles.root}>
             <div className={styles.assistantBubble}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.content}</ReactMarkdown>
+                {turn.chart && <ChartView chart={turn.chart} />}
                 {streaming && <span style={{ display: "inline-block", width: 2, height: "1em", backgroundColor: tokens.colorBrandForeground1, marginLeft: 2, animation: "blink 1s step-end infinite" }} />}
                 {c && (
                     <div className={styles.controlsBadgeRow}>

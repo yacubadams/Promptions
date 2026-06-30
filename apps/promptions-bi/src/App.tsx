@@ -4,6 +4,7 @@ import { DataArea24Regular } from "@fluentui/react-icons";
 import { produce } from "immer";
 import { ClaudeService } from "./services/ClaudeService";
 import { BIService } from "./services/BIService";
+import { extractChart } from "./services/chartParser";
 import { ControlsPanel, ChatInput, MessageBubble } from "./components";
 import { BIControls, BITurn, DEFAULT_BI_CONTROLS } from "./types/bi";
 
@@ -46,20 +47,29 @@ export default function App() {
         finally { setSuggesting(false); }
     };
 
-    const handleSend = async (question: string, data: string | undefined) => {
+    const handleSend = async (question: string, data: string | undefined, fileName: string | undefined) => {
         abortRef.current?.abort();
         const abort = new AbortController();
         abortRef.current = abort;
         const snapshotControls = { ...controls };
-        const userTurn: BITurn = { id: crypto.randomUUID(), role: "user", content: question, dataAttachment: data };
+        const userTurn: BITurn = { id: crypto.randomUUID(), role: "user", content: question, dataAttachment: data, fileName };
         const assistantTurn: BITurn = { id: crypto.randomUUID(), role: "assistant", content: "", controls: snapshotControls };
         setTurns((prev) => [...prev, userTurn, assistantTurn]);
         setStreaming(true);
         try {
             await biService.streamAnalysis(question, data, turns, snapshotControls,
                 (text, done) => {
-                    setTurns((prev) => produce(prev, (draft) => { const last = draft.at(-1); if (last?.role === "assistant") last.content = text; }));
-                    if (done) setStreaming(false);
+                    // While streaming, show raw text. On completion, extract any chart block.
+                    if (done) {
+                        const { cleanedText, chart } = extractChart(text);
+                        setTurns((prev) => produce(prev, (draft) => {
+                            const last = draft.at(-1);
+                            if (last?.role === "assistant") { last.content = cleanedText; last.chart = chart; }
+                        }));
+                        setStreaming(false);
+                    } else {
+                        setTurns((prev) => produce(prev, (draft) => { const last = draft.at(-1); if (last?.role === "assistant") last.content = text; }));
+                    }
                 }, abort.signal);
         } catch (e: unknown) {
             if (e instanceof Error && e.name === "AbortError") return;

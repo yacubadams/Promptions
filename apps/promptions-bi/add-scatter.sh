@@ -1,3 +1,73 @@
+#!/bin/bash
+# add-scatter.sh — adds scatter chart support + makes chart type control authoritative
+set -e
+cd ~/Promptions/apps/promptions-bi
+echo "Adding scatter chart support..."
+
+# ---- src/types/bi.ts ----
+mkdir -p "$(dirname src/types/bi.ts)"
+cat > src/types/bi.ts << 'PROMPTIONS_EOF'
+export type OutputFormat = "narrative" | "table" | "bullet_points" | "executive_summary";
+export type Verbosity = "concise" | "standard" | "detailed";
+export type TimeGrain = "daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "auto";
+export type ChartType = "bar" | "line" | "pie" | "scatter" | "auto";
+export type Audience = "analyst" | "executive" | "mixed";
+export type ConfidenceDisplay = "none" | "qualitative" | "quantitative";
+
+export interface BIControls {
+    outputFormat: OutputFormat;
+    verbosity: Verbosity;
+    timeGrain: TimeGrain;
+    chartType: ChartType;
+    audience: Audience;
+    confidenceDisplay: ConfidenceDisplay;
+    breakdownDimensions: string[];
+}
+
+export const DEFAULT_BI_CONTROLS: BIControls = {
+    outputFormat: "narrative",
+    verbosity: "standard",
+    timeGrain: "auto",
+    chartType: "auto",
+    audience: "analyst",
+    confidenceDisplay: "qualitative",
+    breakdownDimensions: [],
+};
+
+// A chart specification emitted by Claude and rendered by the app
+export interface ChartSpec {
+    type: "bar" | "line" | "pie" | "area" | "scatter";
+    title?: string;
+    // The key in each data row used for the x-axis / category labels
+    xKey: string;
+    // One or more numeric keys to plot as series
+    yKeys: string[];
+    // The actual rows of data
+    data: Record<string, string | number>[];
+}
+
+export interface BITurn {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    controls?: BIControls;
+    dataAttachment?: string;
+    // Name of the uploaded file, if any
+    fileName?: string;
+    // Chart parsed out of the assistant's response, if any
+    chart?: ChartSpec;
+}
+
+export interface BISession {
+    turns: BITurn[];
+    controls: BIControls;
+    streaming: boolean;
+}
+PROMPTIONS_EOF
+
+# ---- src/services/BIService.ts ----
+mkdir -p "$(dirname src/services/BIService.ts)"
+cat > src/services/BIService.ts << 'PROMPTIONS_EOF'
 import { ClaudeService, ChatMessage } from "./ClaudeService";
 import { BIControls, BITurn } from "../types/bi";
 
@@ -115,3 +185,139 @@ Return only the JSON object, no markdown fences, no explanation.`;
         }
     }
 }
+PROMPTIONS_EOF
+
+# ---- src/components/ChartView.tsx ----
+mkdir -p "$(dirname src/components/ChartView.tsx)"
+cat > src/components/ChartView.tsx << 'PROMPTIONS_EOF'
+// components/ChartView.tsx — renders a ChartSpec using Recharts.
+import React from "react";
+import { tokens } from "@fluentui/react-components";
+import {
+    BarChart, Bar, LineChart, Line, AreaChart, Area,
+    PieChart, Pie, Cell,
+    ScatterChart, Scatter,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+import { ChartSpec } from "../types/bi";
+
+const COLORS = ["#4f8ef7", "#2dd4a0", "#f7a34f", "#9d7cf4", "#f75f5f", "#36c5d4"];
+
+interface Props {
+    chart: ChartSpec;
+}
+
+export const ChartView: React.FC<Props> = ({ chart }) => {
+    const { type, title, xKey, yKeys, data } = chart;
+
+    return (
+        <div
+            style={{
+                marginTop: tokens.spacingVerticalM,
+                padding: tokens.spacingHorizontalM,
+                border: `1px solid ${tokens.colorNeutralStroke2}`,
+                borderRadius: tokens.borderRadiusLarge,
+                backgroundColor: tokens.colorNeutralBackground1,
+            }}
+        >
+            {title && (
+                <div
+                    style={{
+                        fontSize: tokens.fontSizeBase300,
+                        fontWeight: tokens.fontWeightSemibold,
+                        marginBottom: tokens.spacingVerticalS,
+                    }}
+                >
+                    {title}
+                </div>
+            )}
+            <ResponsiveContainer width="100%" height={300}>
+                {renderChart(type, xKey, yKeys, data)}
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+function renderChart(
+    type: ChartSpec["type"],
+    xKey: string,
+    yKeys: string[],
+    data: Record<string, string | number>[],
+): React.ReactElement {
+    if (type === "line") {
+        return (
+            <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey={xKey} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {yKeys.map((key, i) => (
+                    <Line key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} strokeWidth={2} />
+                ))}
+            </LineChart>
+        );
+    }
+
+    if (type === "area") {
+        return (
+            <AreaChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey={xKey} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {yKeys.map((key, i) => (
+                    <Area key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.3} />
+                ))}
+            </AreaChart>
+        );
+    }
+
+    if (type === "pie") {
+        const pieKey = yKeys[0];
+        return (
+            <PieChart>
+                <Tooltip />
+                <Legend />
+                <Pie data={data} dataKey={pieKey} nameKey={xKey} cx="50%" cy="50%" outerRadius={100} label>
+                    {data.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                </Pie>
+            </PieChart>
+        );
+    }
+
+    if (type === "scatter") {
+        return (
+            <ScatterChart>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey={xKey} name={xKey} />
+                <YAxis dataKey={yKeys[0]} name={yKeys[0]} />
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                <Legend />
+                {yKeys.map((key, i) => (
+                    <Scatter key={key} name={key} data={data} fill={COLORS[i % COLORS.length]} />
+                ))}
+            </ScatterChart>
+        );
+    }
+
+    // default: bar
+    return (
+        <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey={xKey} />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            {yKeys.map((key, i) => (
+                <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} />
+            ))}
+        </BarChart>
+    );
+}
+PROMPTIONS_EOF
+
+echo "Done. Verify with: yarn build"
